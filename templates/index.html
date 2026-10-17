@@ -1,0 +1,770 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supplier Risk Radar</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f6f5f2; --surface:#fcfcfb; --surface-2:#f0efec; --line:#e2e0da;
+  --text:#0b0b0b; --text-2:#52514e; --text-3:#7a7974;
+  --brand:#7a00cc; --brand-soft:#efe3fa;
+  --good:#0ca30c; --warning:#fab219; --critical:#d03b3b;
+  --good-bg:#e6f4e6; --warning-bg:#fdf1d6; --critical-bg:#fbe5e4;
+  --good-ink:#0a6b0a; --warning-ink:#8a5a00; --critical-ink:#a42727;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#232321; --line:#33332f;
+    --text:#f0efec; --text-2:#c3c2b7; --text-3:#8f8e86;
+    --brand:#b46cff; --brand-soft:#2c1d3d;
+    --good-bg:#16301a; --warning-bg:#3a2e12; --critical-bg:#3d1b1b;
+    --good-ink:#6fd86f; --warning-ink:#ffcd5e; --critical-ink:#ff8a8a; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#232321; --line:#33332f;
+  --text:#f0efec; --text-2:#c3c2b7; --text-3:#8f8e86;
+  --brand:#b46cff; --brand-soft:#2c1d3d;
+  --good-bg:#16301a; --warning-bg:#3a2e12; --critical-bg:#3d1b1b;
+  --good-ink:#6fd86f; --warning-ink:#ffcd5e; --critical-ink:#ff8a8a; --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,select,input{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--text-3)} .small{font-size:12px}
+.hidden{display:none!important}
+
+/* cabecera mínima */
+header{background:var(--surface);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:12px;padding:10px 20px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;font-weight:700;font-size:15px}
+.brand .mark{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--brand);display:grid;place-items:center}
+.brand .mark i{width:10px;height:10px;border-radius:50%;background:var(--brand);display:block}
+.btn{text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:7px 12px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:4px 10px;font-size:12.5px;border-radius:7px}
+.btn.solve{border-color:var(--brand);color:var(--brand);font-weight:600}
+.btn.solve.confirm{background:var(--brand);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.icon-btn{border:1px solid var(--line);background:var(--surface);width:34px;height:34px;border-radius:9px;cursor:pointer;display:grid;place-items:center;color:var(--text-2)}
+.icon-btn:hover{background:var(--surface-2)}
+#filtersToggle{display:none}
+
+/* layout con sidebar */
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:20px;max-width:1500px;margin:0 auto;padding:20px}
+aside.side{position:sticky;top:20px;align-self:start;max-height:calc(100vh - 40px);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr);padding:12px}
+  .bar{padding:10px 12px}
+  aside.side{position:static;max-height:none;display:none}
+  aside.side.open{display:flex}
+  #filtersToggle{display:grid}
+}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.f-group{display:flex;flex-direction:column;gap:6px}
+.f-group > label, .f-title{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);font-weight:650}
+.f-group select,.f-group input[type=search],.f-group input[type=text],.f-group input[type=email],.f-group input[type=number],.f-group input[type=password]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.day-row{display:flex;gap:4px}
+.day-row select{flex:1}
+.day-row button{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:32px;cursor:pointer;color:var(--text-2)}
+.day-row button:disabled{opacity:.35;cursor:default}
+.check{display:flex;align-items:center;gap:8px;cursor:pointer;padding:3px 0}
+.check input{accent-color:var(--brand);width:15px;height:15px}
+.check .cnt{margin-left:auto;color:var(--text-3);font-size:12px}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface)}
+.seg button{flex:1;border:0;background:none;padding:6px 8px;cursor:pointer;font-size:12.5px;color:var(--text-2)}
+.seg button.on{background:var(--brand-soft);color:var(--brand);font-weight:650}
+.linkbtn{background:none;border:0;color:var(--brand);cursor:pointer;padding:0;font-weight:600;font-size:12.5px;text-align:left}
+.solved li{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:12.5px}
+.solved ul{list-style:none;margin:0;padding:0}
+
+/* badges de estado: icono + texto */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:2px 8px 2px 4px;border-radius:999px;white-space:nowrap}
+.st i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:10px;color:#fff;font-weight:800}
+.st.critical{background:var(--critical-bg);color:var(--critical-ink)} .st.critical i{background:var(--critical)}
+.st.warning,.st.watch{background:var(--warning-bg);color:var(--warning-ink)} .st.warning i,.st.watch i{background:var(--warning);color:#3a2a00}
+.st.good{background:var(--good-bg);color:var(--good-ink)} .st.good i{background:var(--good)}
+.st.none{background:var(--surface-2);color:var(--text-3)} .st.none i{background:var(--text-3)}
+
+/* resumen instantáneo */
+.summary{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:0;overflow:hidden}
+@media (max-width:1100px){.summary{grid-template-columns:1fr}}
+.sum-main{padding:20px 22px;display:flex;gap:16px;align-items:flex-start;border-left:6px solid var(--line)}
+.summary.critical .sum-main{border-left-color:var(--critical);background:linear-gradient(90deg,var(--critical-bg),transparent 70%)}
+.summary.warning .sum-main,.summary.watch .sum-main{border-left-color:var(--warning);background:linear-gradient(90deg,var(--warning-bg),transparent 70%)}
+.summary.good .sum-main{border-left-color:var(--good);background:linear-gradient(90deg,var(--good-bg),transparent 70%)}
+.sum-icon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-weight:800;color:#fff;flex:none}
+.summary.critical .sum-icon{background:var(--critical)} .summary.warning .sum-icon,.summary.watch .sum-icon{background:var(--warning);color:#3a2a00} .summary.good .sum-icon{background:var(--good)}
+.sum-title{font-size:24px;font-weight:750;letter-spacing:-.02em;line-height:1.15}
+.sum-sub{color:var(--text-2);margin-top:4px}
+.sum-day{color:var(--text-3);font-size:12.5px;margin-bottom:4px}
+.sum-mail{margin-top:10px;font-size:12.5px;color:var(--text-3)}
+.sum-stats{display:grid;grid-template-columns:repeat(2,1fr);border-left:1px solid var(--line)}
+@media (max-width:1100px){.sum-stats{border-left:0;border-top:1px solid var(--line);grid-template-columns:repeat(4,1fr)}}
+@media (max-width:560px){.sum-stats{grid-template-columns:repeat(2,1fr)}}
+.stat{padding:14px 18px;border-bottom:1px solid var(--line)}
+.stat:nth-child(odd){border-right:1px solid var(--line)}
+.stat .v{font-size:26px;font-weight:750;letter-spacing:-.02em}
+.stat .l{color:var(--text-2);font-size:12.5px}
+.stat.hot .v{color:var(--critical-ink)}
+.top-issues{grid-column:1/-1;border-top:1px solid var(--line);display:flex;flex-wrap:wrap}
+.issue{flex:1 1 240px;padding:10px 18px;border-right:1px solid var(--line);cursor:pointer}
+.issue:hover{background:var(--surface-2)}
+.issue:last-child{border-right:0}
+.issue b{display:block}
+.issue .small{color:var(--text-3)}
+
+/* secciones */
+.section{margin-top:22px}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin:0;font-weight:650}
+.section-head p{margin:0;color:var(--text-3);font-size:12.5px}
+.grid-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px}
+@media (max-width:1100px){.grid-2{grid-template-columns:1fr}}
+
+/* tabla de materiales */
+.tbl-wrap{overflow:auto;border-radius:14px}
+table{width:100%;border-collapse:collapse}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--surface);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.mrow{cursor:pointer}
+tr.mrow:hover td{background:var(--surface-2)}
+tr.mrow.open td{background:var(--surface-2);border-bottom-color:transparent}
+tr.detail td{background:var(--surface-2);padding:4px 16px 16px}
+td.r,th.r{text-align:right}
+.lvl{display:inline-block;width:4px;align-self:stretch;border-radius:2px}
+.mat-name{display:flex;gap:10px}
+.mat-name .bar{width:4px;border-radius:2px;flex:none;padding:0;background:var(--line)}
+.mat-name .bar.critical{background:var(--critical)} .mat-name .bar.warning,.mat-name .bar.watch{background:var(--warning)} .mat-name .bar.good{background:var(--good);opacity:.5}
+.cov{font-weight:650}
+.cov.critical{color:var(--critical-ink)} .cov.warning,.cov.watch{color:var(--warning-ink)} .cov.good{color:var(--text-2);font-weight:500}
+.sup-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px}
+.chip{display:inline-block;background:var(--surface-2);border-radius:6px;padding:1px 7px;font-size:12px;margin:1px 3px 1px 0;color:var(--text-2)}
+tr.detail .chip{background:var(--surface)}
+.money{font-weight:700;font-size:15px}
+.money.zero{color:var(--text-3);font-weight:500;font-size:13px}
+.detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.detail-grid{grid-template-columns:1fr}}
+.detail-grid h4{margin:6px 0 4px;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3)}
+.detail-grid p{margin:0;color:var(--text-2);font-size:13px}
+.empty{padding:28px;text-align:center;color:var(--text-3)}
+.solved-tag{font-size:12px;color:var(--good-ink);font-weight:600}
+
+/* proveedores */
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.cat{padding:12px 14px}
+.cat h3{margin:0 0 6px;font-size:13px;color:var(--text-2);font-weight:650}
+.tile{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px;cursor:pointer}
+.tile:hover{background:var(--surface-2)}
+.tile .sq{width:11px;height:11px;border-radius:3px;flex:none}
+.tile .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .id{color:var(--text-3);font-size:12px;width:34px;flex:none}
+.sq.critical{background:var(--critical)} .sq.warning{background:var(--warning)} .sq.good{background:var(--good);opacity:.5}
+
+/* tendencia */
+.chart-card{padding:14px 16px}
+#timeline{width:100%;height:210px;display:block}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-2);margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.tip{position:fixed;pointer-events:none;background:var(--text);color:var(--bg);padding:7px 10px;border-radius:8px;font-size:12px;z-index:2000;opacity:0;white-space:nowrap}
+details summary{cursor:pointer;color:var(--brand);font-size:12.5px;font-weight:600;margin-top:4px}
+details p{margin:6px 0 0;color:var(--text-2);font-size:12.5px}
+.news-list{max-height:420px;overflow:auto}
+
+/* drawer y modal */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:1500;opacity:0;pointer-events:none;transition:opacity .15s}
+.scrim.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(520px,100%);background:var(--surface);z-index:1600;transform:translateX(100%);transition:transform .2s;border-left:1px solid var(--line);overflow:auto;padding:20px 22px}
+.drawer.open{transform:none}
+.drawer h3{margin:6px 0 2px;font-size:20px}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:16px 0;font-size:13px}
+.kv div:nth-child(odd){color:var(--text-3)}
+.hist{border-left:2px solid var(--line);margin-left:6px;padding-left:16px}
+.hist .ev{position:relative;padding:0 0 16px}
+.hist .ev:before{content:"";position:absolute;left:-23px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--text-3)}
+.hist .ev.urgent:before{border-color:var(--critical);background:var(--critical)}
+.hist .ev.risk:before{border-color:var(--warning);background:var(--warning)}
+.hist .ev.off{opacity:.6}
+.modal{position:fixed;inset:0;z-index:1700;display:none;place-items:center;padding:16px}
+.modal.open{display:grid}
+.modal-box{background:var(--surface);border:1px solid var(--line);border-radius:16px;width:min(640px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:20px 22px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal-box h3{margin:0 0 4px;font-size:18px}
+.modal-sec{border-top:1px solid var(--line);padding-top:14px;margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.modal-sec h4{margin:0;font-size:14px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.row2{grid-template-columns:1fr}}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.log li{font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line)}
+.log ul{list-style:none;margin:0;padding:0;max-height:160px;overflow:auto}
+.ok{color:var(--good-ink);font-weight:600} .ko{color:var(--critical-ink);font-weight:600}
+.hint{font-size:12px;color:var(--text-3)}
+
+/* dropzone */
+.drop{border:2px dashed var(--line);border-radius:16px;padding:48px 24px;text-align:center;background:var(--surface);max-width:760px;margin:40px auto}
+.drop.over{border-color:var(--brand);background:var(--brand-soft)}
+.drop h2{text-transform:none;letter-spacing:0;font-size:20px;color:var(--text);margin-bottom:6px}
+.drop p{color:var(--text-2);margin:0 0 16px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:3000;display:none;max-width:90vw}
+.loading{opacity:.55;pointer-events:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <button class="icon-btn" id="filtersToggle" aria-label="Filtros">☰</button>
+    <div class="brand"><div class="mark"><i></i></div>Supplier Risk Radar</div>
+    <label class="btn primary">⬆ Subir noticias<input type="file" id="fileIn" accept=".xlsx,.xlsm" multiple hidden></label>
+    <button class="icon-btn" id="settingsBtn" aria-label="Ajustes" title="Ajustes, correo y datos">⚙</button>
+  </div>
+</header>
+
+<div class="drop hidden" id="drop">
+  <h2>Sube el Excel de noticias del día</h2>
+  <p>Arrastra aquí uno o varios .xlsx con <b>News_ID, Published_Date, Headline y Summary</b>.<br>
+    Cada fichero se añade al histórico y el radar recuerda las alertas de días anteriores.</p>
+  <label class="btn primary">Elegir ficheros<input type="file" id="fileIn2" accept=".xlsx,.xlsm" multiple hidden></label>
+  <button class="btn" id="exBtn2">Cargar datos de ejemplo</button>
+</div>
+
+<div class="layout hidden" id="dash">
+  <!-- ============ SIDEBAR DE FILTROS ============ -->
+  <aside class="card side" id="side" aria-label="Filtros">
+    <div class="f-group">
+      <label for="daySel">Día</label>
+      <div class="day-row">
+        <button id="prevDay" aria-label="Día anterior">◀</button>
+        <select id="daySel"></select>
+        <button id="nextDay" aria-label="Día siguiente">▶</button>
+      </div>
+    </div>
+    <div class="f-group">
+      <span class="f-title">Mostrar</span>
+      <div class="seg" id="scopeSeg"><button data-v="problems" class="on">Con problemas</button><button data-v="all">Todo</button></div>
+    </div>
+    <div class="f-group" id="levelBox">
+      <span class="f-title">Situación del material</span>
+    </div>
+    <div class="f-group">
+      <label for="fCat">Categoría</label>
+      <select id="fCat"><option value="">Todas</option></select>
+    </div>
+    <div class="f-group">
+      <label for="fMat">Material / servicio</label>
+      <select id="fMat"><option value="">Todos</option></select>
+    </div>
+    <div class="f-group">
+      <label for="fProd">Producto afectado</label>
+      <select id="fProd"><option value="">Todos</option></select>
+    </div>
+    <div class="f-group">
+      <label class="check"><input type="checkbox" id="fSingle"> Solo fuente única</label>
+    </div>
+    <div class="f-group">
+      <label for="fText">Buscar</label>
+      <input type="search" id="fText" placeholder="Proveedor, ciudad, ID…">
+    </div>
+    <div class="f-group">
+      <span class="f-title">Tendencia</span>
+      <div class="seg" id="rangeSeg"><button data-v="7">7 d</button><button data-v="14">14 d</button><button data-v="30" class="on">30 d</button><button data-v="0">Todo</button></div>
+    </div>
+    <button class="linkbtn" id="clearF">Limpiar filtros</button>
+    <div class="f-group solved" id="solvedBox"></div>
+  </aside>
+
+  <!-- ============ CONTENIDO ============ -->
+  <main>
+    <section class="card summary" id="summary" aria-live="polite"></section>
+
+    <section class="section">
+      <div class="section-head"><h2>Materiales y servicios</h2><p id="matSub"></p></div>
+      <div class="card tbl-wrap">
+        <table>
+          <thead><tr><th>Material</th><th>Situación</th><th>Proveedores</th><th>Problema</th><th class="r">Impacto estimado</th><th></th></tr></thead>
+          <tbody id="matBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><h2>Proveedores</h2><p id="supSub"></p></div>
+      <div class="cats" id="cats"></div>
+    </section>
+
+    <section class="section grid-2">
+      <div>
+        <div class="section-head"><h2>Riesgos por día</h2><p>Clic en una barra para ir a ese día</p></div>
+        <div class="card chart-card">
+          <svg id="timeline" role="img" aria-label="Riesgos urgentes y no urgentes por día"></svg>
+          <div class="legend"><span><span class="dot" style="background:var(--critical)"></span>Urgentes</span><span><span class="dot" style="background:var(--warning)"></span>Riesgo no urgente</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-head"><h2>Noticias del día</h2>
+          <div class="seg" id="newsSeg"><button data-v="risk" class="on">Solo riesgos</button><button data-v="all">Todas</button></div></div>
+        <div class="card tbl-wrap news-list">
+          <table><tbody id="newsBody"></tbody></table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ficha de proveedor -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Detalle del proveedor"></aside>
+
+<!-- ajustes -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="mTitle">Ajustes</h3><button class="btn small" id="closeModal">✕ Cerrar</button>
+    </div>
+
+    <div class="modal-sec">
+      <h4>✉ Avisos por correo</h4>
+      <p class="hint" style="margin:0">Se envía un correo cuando aparece una alerta de <b>máxima importancia</b>: un material sin proveedor operativo (por ejemplo, un proveedor de fuente única caído). Cada alerta se avisa una sola vez.</p>
+      <div class="f-group"><label for="eTo">Enviar avisos a</label><input type="email" id="eTo" placeholder="compras@helixa.com"></div>
+      <label class="check"><input type="checkbox" id="eOn"> Enviar automáticamente al subir noticias</label>
+      <details>
+        <summary>Servidor de correo (SMTP)</summary>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+          <div class="f-group"><label for="sPreset">Proveedor de correo</label>
+            <select id="sPreset"><option value="">Elegir…</option><option value="gmail">Gmail</option><option value="outlook">Outlook / Microsoft 365</option><option value="other">Otro</option></select></div>
+          <div class="row2">
+            <div class="f-group"><label for="sHost">Servidor</label><input type="text" id="sHost" placeholder="smtp.gmail.com"></div>
+            <div class="row2">
+              <div class="f-group"><label for="sPort">Puerto</label><input type="number" id="sPort" value="587"></div>
+              <div class="f-group"><label for="sSec">Seguridad</label><select id="sSec"><option value="starttls">STARTTLS</option><option value="ssl">SSL</option><option value="none">Ninguna</option></select></div>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="f-group"><label for="sUser">Usuario</label><input type="text" id="sUser" autocomplete="off"></div>
+            <div class="f-group"><label for="sPass">Contraseña</label><input type="password" id="sPass" autocomplete="new-password"></div>
+          </div>
+          <p class="hint" id="sHint" style="margin:0">Con Gmail hay que usar una <b>contraseña de aplicación</b>, no la contraseña normal. La contraseña se guarda solo en este ordenador (datos_dashboard/smtp.json); también puedes pasarla con la variable de entorno RADAR_SMTP_PASSWORD.</p>
+        </div>
+      </details>
+      <div class="actions">
+        <button class="btn primary" id="eSave">Guardar</button>
+        <button class="btn" id="eTest">Enviar correo de prueba</button>
+        <button class="btn" id="eNow">Enviar alertas del día</button>
+      </div>
+      <div class="log" id="eLog"></div>
+    </div>
+
+    <div class="modal-sec">
+      <h4>€ Supuestos del impacto económico</h4>
+      <div class="row2">
+        <div class="f-group"><label for="aMult">Valor de producción por € de material</label><input type="number" id="aMult" step="0.5" min="0"></div>
+        <div class="f-group"><label for="aPrem">Sobrecoste comprando al alternativo (%)</label><input type="number" id="aPrem" step="1" min="0"></div>
+      </div>
+      <p class="hint" style="margin:0">Sin respaldo: días que el inventario no cubre × gasto diario del material × valor de producción. Cubierto por el alternativo: días × gasto diario × sobrecoste. Son estimaciones para priorizar, no cifras contables.</p>
+      <div class="actions"><button class="btn primary" id="aSave">Guardar supuestos</button></div>
+    </div>
+
+    <div class="modal-sec">
+      <h4>Datos</h4>
+      <div class="actions">
+        <a class="btn" id="exportBtn" href="#">⬇ CSV del día</a>
+        <button class="btn" id="mExamples">Cargar datos de ejemplo</button>
+        <button class="btn" id="mMaster">Cambiar fichero maestro</button><input type="file" id="masterIn" accept=".xlsx" hidden>
+        <button class="btn" id="mTheme">Tema claro / oscuro</button>
+        <button class="btn" id="mReset" style="color:var(--critical-ink)">Borrar histórico</button>
+      </div>
+      <p class="hint" id="mMeta" style="margin:0"></p>
+    </div>
+  </div>
+</div>
+
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ST = {critical:["✕","Interrumpido"], warning:["!","En riesgo"], watch:["!","Vigilar"], good:["✓","Operativo"]};
+const LV = {critical:"Sin respaldo", warning:"Plan B / alternativo", watch:"Vigilar", good:"Operativo"};
+const badge = (s, label) => s ? `<span class="st ${s}"><i>${ST[s][0]}</i>${esc(label || ST[s][1])}</span>` : `<span class="st none"><i>–</i>Sin alternativo</span>`;
+const fmtDate = d => d ? new Date(d + "T00:00:00").toLocaleDateString("es-ES", {weekday:"short", day:"numeric", month:"short", year:"numeric"}) : "";
+const shortDate = d => d ? new Date(d + "T00:00:00").toLocaleDateString("es-ES", {day:"numeric", month:"short"}) : "";
+const eur = x => (x || 0).toLocaleString("es-ES", {maximumFractionDigits:0}) + " €";
+const eurShort = x => x >= 1e6 ? (x/1e6).toLocaleString("es-ES",{maximumFractionDigits:1}) + " M€" : x >= 1e3 ? Math.round(x/1e3).toLocaleString("es-ES") + " k€" : eur(x);
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+let S = null, day = null, openRow = null, settings = null;
+const DEF_LEVELS = ["critical","warning"];   // por defecto: solo lo que es peligro hoy
+const F = {scope:"problems", levels:new Set(DEF_LEVELS), cat:"", mat:"", prod:"", single:false, text:"", range:30, news:"risk"};
+try { const t = localStorage.getItem("radar-theme"); if (t) document.documentElement.dataset.theme = t; } catch(e) {}
+
+function toast(msg, ms=3500){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none", ms); }
+
+async function load(d){
+  document.body.classList.add("loading");
+  try{
+    const j = await (await fetch("/api/state" + (d ? "?dia=" + d : ""))).json();
+    if (j.error) { toast("Error: " + j.error, 6000); return; }
+    S = j; day = j.day; render();
+  } catch(e){ toast("No se pudo conectar con el servidor."); }
+  finally { document.body.classList.remove("loading"); }
+}
+
+function render(){
+  const empty = !S.dates.length;
+  $("#drop").classList.toggle("hidden", !empty);
+  $("#dash").classList.toggle("hidden", empty);
+  $("#exBtn2").style.display = S.examples ? "" : "none";
+  $("#mMeta").innerHTML = `Maestro: ${esc(S.master || "—")} · ${S.files.length} fichero(s) · ${S.total_news} noticias en el histórico`;
+  $("#exportBtn").href = "/api/export?dia=" + (day || "");
+  if (empty) return;
+  renderFilters(); renderSummary(); renderMaterials(); renderSuppliers(); renderTimeline(); renderNews();
+}
+
+/* ---------------- filtros ---------------- */
+function renderFilters(){
+  $("#daySel").innerHTML = S.dates.slice().reverse().map(d => `<option value="${d}" ${d===day?"selected":""}>${fmtDate(d)}${d===S.dates.at(-1)?" · último":""}</option>`).join("");
+  const i = S.dates.indexOf(day);
+  $("#prevDay").disabled = i <= 0; $("#nextDay").disabled = i >= S.dates.length - 1;
+  const counts = {}; S.materials.forEach(m => counts[m.level] = (counts[m.level]||0) + 1);
+  $("#levelBox").innerHTML = `<span class="f-title">Situación del material</span>` + ["critical","warning","watch","good"].map(l =>
+    `<label class="check"><input type="checkbox" data-l="${l}" ${F.levels.has(l)?"checked":""} ${F.scope==="problems"&&l==="good"?"disabled":""}>
+      <span class="dot" style="background:var(--${l==="watch"?"warning":l})"></span>${LV[l]}<span class="cnt">${counts[l]||0}</span></label>`).join("");
+  $$("#levelBox input").forEach(c => c.onchange = () => { c.checked ? F.levels.add(c.dataset.l) : F.levels.delete(c.dataset.l); renderMain(); });
+  fillSelect("#fCat", S.categories, F.cat, "Todas");
+  fillSelect("#fMat", S.materials.map(m => m.material).sort(), F.mat, "Todos");
+  fillSelect("#fProd", S.products, F.prod, "Todos");
+  const solved = Object.entries(S.manual_closures || {});
+  $("#solvedBox").innerHTML = solved.length ? `<span class="f-title">Solucionados a mano</span><ul>${solved.map(([sid,d]) => {
+    const s = S.suppliers.find(x => x.id === sid);
+    return `<li><span>${esc(sid)} ${esc(s ? s.name : "")} <span class="muted">· ${shortDate(d)}</span></span><button class="linkbtn" data-undo="${sid}">deshacer</button></li>`;}).join("")}</ul>` : "";
+  $$("#solvedBox [data-undo]").forEach(b => b.onclick = () => solve([b.dataset.undo], true));
+}
+function fillSelect(sel, items, val, all){
+  $(sel).innerHTML = `<option value="">${all}</option>` + items.map(x => `<option ${x===val?"selected":""}>${esc(x)}</option>`).join("");
+}
+function matchText(m){
+  if (!F.text) return true;
+  const hay = [m.id, m.material, m.primary, m.primary_name, m.alternate, m.alternate_name, ...m.products].join(" ").toLowerCase();
+  const sup = [m.primary, m.alternate].map(id => S.suppliers.find(s => s.id === id)).filter(Boolean).map(s => s.city + " " + s.country).join(" ").toLowerCase();
+  return (hay + " " + sup).includes(F.text.toLowerCase());
+}
+function filteredMaterials(){
+  return S.materials.filter(m =>
+    (F.scope === "all" || m.level !== "good") && F.levels.has(m.level) &&
+    (!F.cat || m.category === F.cat) && (!F.mat || m.material === F.mat) &&
+    (!F.prod || m.products.includes(F.prod)) && (!F.single || m.single_source) && matchText(m));
+}
+function renderMain(){ renderMaterials(); renderSuppliers(); }
+
+/* ---------------- resumen instantáneo ---------------- */
+function renderSummary(){
+  const s = S.summary, icon = {critical:"✕", warning:"!", watch:"!", good:"✓"}[s.level];
+  const em = settings && settings.email;
+  const mail = em && em.to ? (em.enabled ? `✉ Avisos automáticos activos → ${esc(em.to)}` : `✉ Avisos desactivados (${esc(em.to)})`)
+                           : `✉ <button class="linkbtn" id="mailCfg">Configura un correo</button> para recibir las alertas máximas`;
+  $("#summary").className = "card summary " + s.level;
+  $("#summary").innerHTML = `
+    <div class="sum-main">
+      <div class="sum-icon" aria-hidden="true">${icon}</div>
+      <div>
+        <div class="sum-day">${fmtDate(day)}</div>
+        <div class="sum-title">${esc(s.title)}</div>
+        <div class="sum-sub">${esc(s.sub)}</div>
+        <div class="sum-mail">${mail}</div>
+      </div>
+    </div>
+    <div class="sum-stats">
+      <div class="stat ${s.cost ? "hot" : ""}"><div class="v num">${eurShort(s.cost)}</div><div class="l">Impacto estimado</div></div>
+      <div class="stat ${s.no_backup ? "hot" : ""}"><div class="v num">${s.no_backup}</div><div class="l">Materiales sin respaldo</div></div>
+      <div class="stat ${s.down ? "hot" : ""}"><div class="v num">${s.down}</div><div class="l">Proveedores interrumpidos</div></div>
+      <div class="stat ${s.urgent_today ? "hot" : ""}"><div class="v num">${s.urgent_today}</div><div class="l">Noticias urgentes hoy</div></div>
+    </div>
+    ${s.top.length ? `<div class="top-issues">${s.top.map(t => `
+      <div class="issue" data-id="${t.id}" tabindex="0">
+        ${badge(t.level === "critical" ? "critical" : "warning", t.level === "critical" ? "Sin respaldo" : "Plan B")}
+        <b>${esc(t.material)}</b>
+        <span class="small">${esc(t.event)} · hasta ${shortDate(t.end)} · ${t.cost ? eurShort(t.cost) : "inventario cubre"}</span>
+      </div>`).join("")}</div>` : ""}`;
+  const mc = $("#mailCfg"); if (mc) mc.onclick = openSettings;
+  $$(".issue").forEach(el => { const go = () => focusMaterial(el.dataset.id); el.onclick = go; el.onkeydown = e => e.key === "Enter" && go(); });
+}
+function focusMaterial(id){
+  F.scope = "problems"; F.levels = new Set(DEF_LEVELS); F.cat = F.mat = F.prod = F.text = ""; F.single = false;
+  $("#fText").value = ""; $("#fSingle").checked = false; setSeg("#scopeSeg", "problems");
+  openRow = id; renderFilters(); renderMain();
+  const r = document.querySelector(`tr.mrow[data-id="${id}"]`); if (r) r.scrollIntoView({behavior:"smooth", block:"center"});
+}
+
+/* ---------------- materiales ---------------- */
+function renderMaterials(){
+  const rows = filteredMaterials();
+  const total = rows.reduce((a, m) => a + (m.impact.cost || 0), 0);
+  $("#matSub").textContent = `${rows.length} de ${S.materials.length} · impacto filtrado ${eur(total)}`;
+  if (!rows.length){ $("#matBody").innerHTML = `<tr><td colspan="6" class="empty">${F.scope==="problems" ? "✓ Ningún material con problemas con estos filtros." : "Ningún material con estos filtros."}</td></tr>`; return; }
+  $("#matBody").innerHTML = rows.map(m => {
+    const im = m.impact || {}, open = openRow === m.id;
+    const solvable = m.affected.length > 0;
+    const sup = (id, name, st) => id ? `<div class="sup-line">${badge(st)}<span class="small"><b>${esc(id)}</b> ${esc(name)}</span></div>` : "";
+    const problem = im.main_news ? `<b>${esc(im.main_event)}</b><div class="small muted">${esc(im.main_news)} · ${shortDate(im.start)} → ${shortDate(im.end)}<br>${im.days ? `quedan ${im.days} día${im.days===1?"":"s"}` : "termina hoy"}${m.cover_days ? ` · inventario ${m.cover_days} d` : ""}</div>` : `<span class="muted">—</span>`;
+    const cost = im.cost ? `<span class="money num">${eur(im.cost)}</span>${im.uncovered_days ? `<div class="small muted">${im.uncovered_days} d sin material</div>` : ""}`
+                         : `<span class="money zero">${m.level === "good" ? "—" : "0 €"}</span>${m.level === "critical" ? `<div class="small muted">el inventario cubre</div>` : ""}`;
+    return `<tr class="mrow ${open?"open":""}" data-id="${m.id}" tabindex="0" aria-expanded="${open}">
+      <td><div class="mat-name"><span class="bar ${m.level}"></span><div><b>${esc(m.material)}</b><div class="small muted">${esc(m.id)} · ${esc(m.category)}${m.single_source ? " · fuente única" : ""}</div></div></div></td>
+      <td><span class="cov ${m.level}">${m.level==="critical"?"⛔ ":m.level==="good"?"":"⚠ "}${esc(m.coverage)}</span></td>
+      <td>${sup(m.primary, m.primary_name, m.primary_status)}${m.alternate ? sup(m.alternate, m.alternate_name, m.alternate_status) : `<span class="small muted">sin alternativo aprobado</span>`}</td>
+      <td>${problem}</td>
+      <td class="r">${cost}</td>
+      <td class="r">${solvable ? `<button class="btn small solve" data-solve="${m.id}">✓ Solucionar</button>` : ""}</td>
+    </tr>
+    ${open ? `<tr class="detail"><td colspan="6"><div class="detail-grid">
+      <div><h4>Noticia</h4><p>${esc(m.headline || "—")}</p><h4>Acción recomendada</h4><p><b>${esc(m.action || "—")}</b></p></div>
+      <div><h4>Cálculo del impacto</h4><p>${esc(im.basis || "—")}</p><h4>Productos</h4><p>${m.products.map(p=>`<span class="chip">${esc(p)}</span>`).join("") || "—"}</p></div>
+      <div><h4>Por qué</h4><p>${esc(m.explanation || "—")}</p>
+        <p style="margin-top:8px">${m.affected.map(id => `<button class="linkbtn" data-sup="${id}">Ver ficha ${esc(id)}</button>`).join(" · ")}</p></div>
+    </div></td></tr>` : ""}`;
+  }).join("");
+  $$("tr.mrow").forEach(tr => {
+    const toggle = () => { openRow = openRow === tr.dataset.id ? null : tr.dataset.id; renderMaterials(); };
+    tr.onclick = e => { if (!e.target.closest("button")) toggle(); };
+    tr.onkeydown = e => { if (e.key === "Enter" && !e.target.closest("button")) toggle(); };
+  });
+  $$("[data-solve]").forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    if (!b.classList.contains("confirm")){ b.classList.add("confirm"); b.textContent = "¿Confirmar?"; setTimeout(() => { if (b.isConnected){ b.classList.remove("confirm"); b.textContent = "✓ Solucionar"; } }, 4000); return; }
+    const m = S.materials.find(x => x.id === b.dataset.solve); solve(m.affected, false, m.material);
+  });
+  $$("#matBody [data-sup]").forEach(b => b.onclick = e => { e.stopPropagation(); openDrawer(b.dataset.sup); });
+}
+async function solve(sids, undo, label){
+  await fetch("/api/solve", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({suppliers:sids, dia:day, undo})});
+  closeDrawer(); await load(day);
+  toast(undo ? "Solución deshecha: la alerta vuelve a estar activa." : `${label || sids.join(", ")}: marcado como solucionado desde ${shortDate(day)}.`);
+}
+
+/* ---------------- proveedores ---------------- */
+function renderSuppliers(){
+  const order = {critical:0, warning:1, good:2};
+  const list = S.suppliers.filter(s =>
+    (F.scope === "all" || s.status !== "good") && (!F.cat || s.category === F.cat) &&
+    (!F.mat || s.material === F.mat || S.materials.some(m => m.material === F.mat && (m.primary === s.id || m.alternate === s.id))) &&
+    (!F.prod || s.products.includes(F.prod)) && (!F.single || s.single_source) &&
+    (!F.text || [s.id, s.name, s.city, s.country, s.material].join(" ").toLowerCase().includes(F.text.toLowerCase())));
+  $("#supSub").textContent = `${list.length} de ${S.suppliers.length}` + (F.scope === "problems" ? " · solo con alertas activas" : "");
+  if (!list.length){ $("#cats").innerHTML = `<div class="card empty" style="grid-column:1/-1">✓ Ningún proveedor con alertas activas con estos filtros.</div>`; return; }
+  const cats = {}; list.forEach(s => (cats[s.category] ??= []).push(s));
+  $("#cats").innerHTML = Object.entries(cats).map(([c, l]) => `
+    <div class="card cat"><h3>${esc(c)}</h3>
+      ${l.sort((a,b)=>order[a.status]-order[b.status]||a.id.localeCompare(b.id)).map(s => `
+        <div class="tile" data-sid="${s.id}" tabindex="0" title="${ST[s.status][1]} · ${esc(s.material)}">
+          <span class="sq ${s.status}" aria-label="${ST[s.status][1]}"></span>
+          <span class="id">${s.id}</span><span class="nm">${esc(s.name)}</span>
+          ${s.status !== "good" ? badge(s.status) : (s.single_source ? `<span class="chip">fuente única</span>` : "")}
+        </div>`).join("")}
+    </div>`).join("");
+  $$(".tile").forEach(el => { el.onclick = () => openDrawer(el.dataset.sid); el.onkeydown = e => e.key === "Enter" && openDrawer(el.dataset.sid); });
+}
+
+/* ---------------- tendencia ---------------- */
+function renderTimeline(){
+  const svg = $("#timeline"), W = svg.clientWidth || 600, H = 210;
+  const pad = {l:28, r:8, t:10, b:28};
+  let T = S.timeline;
+  if (F.range){ const end = new Date(day + "T00:00:00"); const start = new Date(end - (F.range - 1) * 864e5);
+    T = T.filter(t => { const d = new Date(t.date + "T00:00:00"); return d >= start && d <= end; }); }
+  const n = Math.max(1, T.length), max = Math.max(2, ...T.map(t => t.risk + t.urgent));
+  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b, bw = Math.max(4, Math.min(28, iw / n - 4));
+  const x = i => pad.l + (i + .5) * iw / n, y = v => pad.t + ih - v / max * ih;
+  const line = cssv("--line"), muted = cssv("--text-3");
+  let g = "";
+  for (let v = 0; v <= max; v += Math.ceil(max / 4)){
+    g += `<line x1="${pad.l}" x2="${W-pad.r}" y1="${y(v)}" y2="${y(v)}" stroke="${line}"/><text x="${pad.l-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="${muted}">${v}</text>`;
+  }
+  const step = Math.ceil(n / Math.max(1, Math.floor(iw / 60)));
+  T.forEach((t, i) => {
+    const cx = x(i), sel = t.date === day, yb = pad.t + ih;
+    const hu = t.urgent / max * ih, hr = t.risk / max * ih;
+    if (t.urgent) g += `<path d="${bar(cx-bw/2, yb-hu, bw, hu, !t.risk)}" fill="${cssv("--critical")}"/>`;
+    if (t.risk) g += `<path d="${bar(cx-bw/2, yb-hu-hr, bw, hr-(t.urgent?2:0), true)}" fill="${cssv("--warning")}"/>`;
+    if (!t.risk && !t.urgent) g += `<rect x="${cx-bw/2}" y="${yb-2}" width="${bw}" height="2" rx="1" fill="${line}"/>`;
+    if (sel) g += `<rect x="${cx-bw/2-4}" y="${pad.t-4}" width="${bw+8}" height="${ih+8}" rx="6" fill="none" stroke="${cssv("--brand")}" stroke-width="1.5"/>`;
+    if (i % step === 0 || sel) g += `<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11" fill="${sel?cssv("--text"):muted}" ${sel?'font-weight="700"':''}>${shortDate(t.date)}</text>`;
+    g += `<rect class="hit" data-i="${i}" x="${cx-iw/n/2}" y="${pad.t}" width="${iw/n}" height="${ih}" fill="transparent" style="cursor:pointer"/>`;
+  });
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = g;
+  const tip = $("#tip");
+  $$("#timeline .hit").forEach(h => { const t = T[+h.dataset.i];
+    h.onmousemove = e => { tip.innerHTML = `<b>${fmtDate(t.date)}</b><br>${t.total} noticias · ${t.urgent} urgentes · ${t.risk} no urgentes`; tip.style.opacity = 1; tip.style.left = (e.clientX+12)+"px"; tip.style.top = (e.clientY-40)+"px"; };
+    h.onmouseleave = () => tip.style.opacity = 0;
+    h.onclick = () => { tip.style.opacity = 0; load(t.date); }; });
+}
+function bar(x, y, w, h, roundTop){
+  if (h <= 0) return "";
+  const r = roundTop ? Math.min(4, w/2, h) : 0;
+  return `M${x},${y+h} V${y+r} Q${x},${y} ${x+r},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${y+h} Z`;
+}
+
+/* ---------------- noticias ---------------- */
+function renderNews(){
+  const rows = S.news.filter(n => F.news === "all" || n.is_risk === "Y");
+  $("#newsBody").innerHTML = rows.length ? rows.map(n => {
+    const st = n.urgent === "Y" ? badge("critical", "Urgente") : n.is_risk === "Y" ? badge("warning", "Riesgo") : `<span class="st none"><i>–</i>No</span>`;
+    return `<tr><td style="width:96px">${st}</td><td><b>${esc(n.headline)}</b>
+      <div class="small muted">${esc(n.news_id)} · ${esc(n.source)} · ${esc(n.event)}${n.suppliers ? " · " + n.suppliers.split("; ").map(s => `<button class="linkbtn" data-sup="${s}">${s}</button>`).join(" ") : ""}</div>
+      <details><summary>Por qué</summary><p>${esc(n.explanation)}</p></details></td></tr>`;
+  }).join("") : `<tr><td class="empty">Ninguna noticia de riesgo este día.</td></tr>`;
+  $$("#newsBody [data-sup]").forEach(b => b.onclick = () => openDrawer(b.dataset.sup));
+}
+
+/* ---------------- ficha de proveedor ---------------- */
+function openDrawer(sid){
+  const s = S.suppliers.find(x => x.id === sid); if (!s) return;
+  const alt = s.alternate ? S.suppliers.find(x => x.id === s.alternate) : null;
+  $("#drawer").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">${badge(s.status)}<button class="btn small" id="closeDr">✕ Cerrar</button></div>
+    <h3>${esc(s.name)}</h3><div class="muted">${esc(s.id)} · ${esc(s.category)} · ${esc(s.city)}, ${esc(s.country)}</div>
+    <div class="kv">
+      <div>Material</div><div><b>${esc(s.material)}</b></div>
+      <div>Productos</div><div>${s.products.map(p=>`<span class="chip">${esc(p)}</span>`).join("") || "—"}</div>
+      <div>Fuente única</div><div>${s.single_source ? "<b>Sí</b>, sin alternativo aprobado" : "No"}</div>
+      <div>Alternativo</div><div>${alt ? `<button class="linkbtn" data-sup="${alt.id}">${alt.id} ${esc(alt.name)}</button> ${badge(alt.status)}` : "—"}</div>
+      <div>Criticidad</div><div>${esc(s.criticality)}</div>
+      <div>Inventario</div><div>${s.cover_days ? s.cover_days + " días" : "n/a (servicio / logística)"}</div>
+      <div>Gasto anual</div><div class="num">${eur(s.spend)}</div>
+    </div>
+    ${s.active.length ? `<button class="btn small solve" id="drSolve">✓ Solucionar (${shortDate(day)})</button>` : ""}
+    ${s.manual_closure ? `<p class="small muted">Solucionado a mano el ${shortDate(s.manual_closure)} · <button class="linkbtn" id="drUndo">deshacer</button></p>` : ""}
+    <h2 style="margin:18px 0 12px">Historial de señales</h2>
+    <div class="hist">${s.history.length ? s.history.map(h => `
+      <div class="ev ${h.urgent?"urgent":"risk"} ${h.active?"":"off"}">
+        <div class="small muted">${fmtDate(h.date)} · ${esc(h.news_id)} · ${h.active ? "activa hasta " + shortDate(h.until) : (h.closed ? "cerrada" : "caducada")}</div>
+        <div><b>${esc(h.event)}</b> — ${esc(h.headline)}</div>
+        <div class="small" style="margin-top:4px"><span class="chip">→ ${esc(h.action)}</span> ${h.urgent ? badge("critical","Urgente") : ""}</div>
+        <details><summary>Explicación del radar</summary><p>${esc(h.explanation)}</p></details>
+      </div>`).join("") : `<div class="muted">Sin señales de riesgo hasta este día.</div>`}</div>`;
+  $("#drawer").classList.add("open"); $("#scrim").classList.add("open");
+  $("#closeDr").onclick = closeDrawer;
+  $$("#drawer [data-sup]").forEach(b => b.onclick = () => openDrawer(b.dataset.sup));
+  const sb = $("#drSolve"); if (sb) sb.onclick = () => solve([sid], false, s.name);
+  const ub = $("#drUndo"); if (ub) ub.onclick = () => solve([sid], true);
+}
+function closeDrawer(){ $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
+
+/* ---------------- ajustes y correo ---------------- */
+const PRESETS = {gmail:["smtp.gmail.com",587,"starttls"], outlook:["smtp.office365.com",587,"starttls"]};
+async function loadSettings(){ settings = await (await fetch("/api/settings")).json(); if (S && S.dates.length) renderSummary(); }
+function openSettings(){
+  const s = settings;
+  $("#eTo").value = s.email.to || ""; $("#eOn").checked = !!s.email.enabled;
+  $("#sHost").value = s.smtp.host || ""; $("#sPort").value = s.smtp.port || 587; $("#sSec").value = s.smtp.security || "starttls";
+  $("#sUser").value = s.smtp.user || ""; $("#sPass").value = ""; $("#sPass").placeholder = s.smtp.has_password ? "•••••• (guardada)" : "";
+  $("#aMult").value = s.assumptions.multiplicador_produccion; $("#aPrem").value = Math.round(s.assumptions.sobrecoste_alternativo * 100);
+  renderLog(); $("#modal").classList.add("open"); $("#scrim").classList.add("open"); $("#eTo").focus();
+}
+function closeSettings(){ $("#modal").classList.remove("open"); $("#scrim").classList.remove("open"); }
+function renderLog(){
+  const L = settings.log || [];
+  $("#eLog").innerHTML = L.length ? `<span class="f-title">Últimos envíos</span><ul>${L.map(e => `<li>${esc(e.when)} · ${esc(e.kind)} → ${esc(e.to)} ·
+    ${e.status === "enviado" ? `<span class="ok">enviado</span>` : `<span class="ko">no enviado</span> <span class="muted">(${esc(e.error)}; guardado en ${esc(e.saved)})</span>`}
+    <div class="muted">${esc(e.items.join(", "))}</div></li>`).join("")}</ul>` : "";
+}
+async function saveEmail(){
+  const to = $("#eTo").value.trim();
+  if (to && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { toast("La dirección de correo no parece válida."); return false; }
+  const body = {email:{to, enabled:$("#eOn").checked},
+    smtp:{host:$("#sHost").value.trim(), port:+$("#sPort").value || 587, security:$("#sSec").value, user:$("#sUser").value.trim(), sender:$("#sUser").value.trim(), password:$("#sPass").value}};
+  settings = await (await fetch("/api/settings", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)})).json();
+  $("#sPass").value = ""; $("#sPass").placeholder = settings.smtp.has_password ? "•••••• (guardada)" : "";
+  renderSummary(); return true;
+}
+async function sendMail(test){
+  if (!(await saveEmail())) return;
+  const btn = test ? $("#eTest") : $("#eNow"); btn.disabled = true;
+  const r = await (await fetch("/api/email/send", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({test, dia:day})})).json();
+  btn.disabled = false;
+  if (r.error) return toast(r.error, 6000);
+  toast(r.status === "enviado" ? `Correo enviado a ${r.to}.` : `No se pudo enviar: ${r.error}. Se ha guardado en ${r.saved}.`, 7000);
+  await loadSettings(); renderLog();
+}
+$("#eSave").onclick = async () => { if (await saveEmail()) { toast("Ajustes de correo guardados."); renderLog(); } };
+$("#eTest").onclick = () => sendMail(true);
+$("#eNow").onclick = () => sendMail(false);
+$("#sPreset").onchange = e => { const p = PRESETS[e.target.value]; if (p){ $("#sHost").value = p[0]; $("#sPort").value = p[1]; $("#sSec").value = p[2]; } };
+$("#aSave").onclick = async () => {
+  settings = await (await fetch("/api/settings", {method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({assumptions:{multiplicador_produccion:+$("#aMult").value, sobrecoste_alternativo:(+$("#aPrem").value)/100}})})).json();
+  toast("Supuestos guardados. Impacto recalculado."); load(day);
+};
+
+/* ---------------- subida y datos ---------------- */
+async function upload(files){
+  files = [...files]; if (!files.length) return;
+  const fd = new FormData(); files.forEach(f => fd.append("files", f));
+  document.body.classList.add("loading");
+  const j = await (await fetch("/api/upload", {method:"POST", body:fd})).json();
+  document.body.classList.remove("loading");
+  if (j.error) return toast(j.error, 7000);
+  let msg = j.warnings && j.warnings.length ? j.warnings.join(" · ") : `${files.length} fichero(s) procesado(s).`;
+  if (j.email) msg += j.email.status === "enviado" ? ` ✉ Alerta máxima enviada a ${j.email.to}.` : ` ✉ No se pudo enviar el aviso (${j.email.error}).`;
+  toast(msg, 7000); await loadSettings(); await load(null);
+}
+const loadExamples = async () => {
+  const j = await (await fetch("/api/examples", {method:"POST"})).json(); closeSettings(); await loadSettings(); await load(null);
+  toast("Datos de ejemplo cargados." + (j.email ? (j.email.status === "enviado" ? ` ✉ Alerta enviada a ${j.email.to}.` : " ✉ Aviso no enviado: revisa el SMTP.") : ""), 6000);
+};
+
+/* ---------------- eventos ---------------- */
+function setSeg(sel, v){ $$(sel + " button").forEach(b => b.classList.toggle("on", b.dataset.v === String(v))); }
+$("#fileIn").onchange = e => { upload(e.target.files); e.target.value = ""; };
+$("#fileIn2").onchange = e => { upload(e.target.files); e.target.value = ""; };
+$("#daySel").onchange = e => load(e.target.value);
+$("#prevDay").onclick = () => load(S.dates[S.dates.indexOf(day) - 1]);
+$("#nextDay").onclick = () => load(S.dates[S.dates.indexOf(day) + 1]);
+$("#scopeSeg").onclick = e => { const v = e.target.dataset.v; if (!v) return; F.scope = v; F.levels = new Set(v === "all" ? ["critical","warning","watch","good"] : DEF_LEVELS); setSeg("#scopeSeg", v); renderFilters(); renderMain(); };
+$("#rangeSeg").onclick = e => { const v = e.target.dataset.v; if (v == null) return; F.range = +v; setSeg("#rangeSeg", v); renderTimeline(); };
+$("#newsSeg").onclick = e => { const v = e.target.dataset.v; if (!v) return; F.news = v; setSeg("#newsSeg", v); renderNews(); };
+$("#fCat").onchange = e => { F.cat = e.target.value; renderMain(); };
+$("#fMat").onchange = e => { F.mat = e.target.value; renderMain(); };
+$("#fProd").onchange = e => { F.prod = e.target.value; renderMain(); };
+$("#fSingle").onchange = e => { F.single = e.target.checked; renderMain(); };
+let tt; $("#fText").oninput = e => { clearTimeout(tt); tt = setTimeout(() => { F.text = e.target.value.trim(); renderMain(); }, 150); };
+$("#clearF").onclick = () => { Object.assign(F, {scope:"problems", levels:new Set(DEF_LEVELS), cat:"", mat:"", prod:"", single:false, text:""});
+  $("#fText").value = ""; $("#fSingle").checked = false; setSeg("#scopeSeg", "problems"); renderFilters(); renderMain(); };
+$("#filtersToggle").onclick = () => $("#side").classList.toggle("open");
+$("#settingsBtn").onclick = openSettings;
+$("#closeModal").onclick = closeSettings;
+$("#scrim").onclick = () => { closeDrawer(); closeSettings(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape"){ closeDrawer(); closeSettings(); } });
+$("#mExamples").onclick = loadExamples; $("#exBtn2").onclick = loadExamples;
+$("#mMaster").onclick = () => $("#masterIn").click();
+$("#masterIn").onchange = async e => { const fd = new FormData(); fd.append("file", e.target.files[0]);
+  const j = await (await fetch("/api/master", {method:"POST", body:fd})).json(); toast(j.error || "Fichero maestro actualizado."); e.target.value = ""; load(day); };
+$("#mTheme").onclick = () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const nx = cur === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = nx;
+  try { localStorage.setItem("radar-theme", nx); } catch(e) {} if (S && S.dates.length) renderTimeline();
+};
+$("#mReset").onclick = async () => {
+  const b = $("#mReset");
+  if (!b.dataset.confirm){ b.dataset.confirm = 1; b.textContent = "Pulsa otra vez para borrar"; setTimeout(() => { delete b.dataset.confirm; b.textContent = "Borrar histórico"; }, 4000); return; }
+  await fetch("/api/reset", {method:"POST"}); delete b.dataset.confirm; b.textContent = "Borrar histórico"; closeSettings(); load(null);
+};
+const drop = $("#drop");
+["dragenter","dragover"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+document.addEventListener("drop", e => upload(e.dataTransfer.files));
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => S && S.dates.length && renderTimeline(), 120); });
+
+loadSettings().then(() => load(null));
+</script>
+</body>
+</html>
